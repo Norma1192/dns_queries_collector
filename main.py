@@ -8,6 +8,7 @@ It consists of
 
 import requests
 import json
+import datetime
 
 # REST API Snippet 
 def requestApi (data):
@@ -28,3 +29,30 @@ def requestApi (data):
     response = requests.request("POST", url, headers=headers, data=payload)
 
     return response.status_code
+
+# Data API Constructor
+def dataLineConstructor(line):
+
+    # Here I manipulate the content of each line
+    arr = line.split(' ')
+    date_format = "%d-%b-%Y"
+    converted_date = datetime.datetime.strptime(arr[0], date_format)
+
+    # Data extractor and format configuration
+    time_stamp = converted_date.strftime('%Y-%m-%d') + 'T' + arr[1] + 'Z'
+    name = arr[9]
+    client_ip = arr[6].split('#')[0]
+    client_name = arr[5].split('@')[1]
+    type_of_query = arr[11]
+
+    # Data JSON parsed
+    data = {
+        "timestamp": time_stamp,
+        "name": name,
+        "client_ip": client_ip,
+        "client_name": client_name,
+        "type": type_of_query
+    }
+
+    if None not in data.values():
+        return data
