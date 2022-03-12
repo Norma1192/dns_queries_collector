@@ -9,6 +9,7 @@ It consists of
 import requests
 import json
 import datetime
+import pandas as pd
 
 # REST API Snippet 
 def requestApi (data):
@@ -63,6 +64,9 @@ with open("queries", "r") as file:
     # Stores the information chunk the script will post
     chunk_data = []
 
+    # Stores all the data parsed to be analyzed with pandas
+    total_data = []
+
     # I tried to load line per line, but I needed to set a "Limit of lines", and send the final chunk
     file_loaded = file.readlines()
 
@@ -86,8 +90,36 @@ with open("queries", "r") as file:
             information_request = requestApi(chunk_data)
             if information_request != 200:
                 print("Bad Request at chunk " + str(num_lines % 500))
-
+            # Loads the data chunk in the total data (pandas)
+            total_data += chunk_data
             # Clean chunk data
             chunk_data = []
 
-        print('Done')
+    # Crates a DataFrame with the total data Info
+    df = pd.DataFrame(total_data)
+
+    # Process the hosts statistics data using pandas
+    domains = df.value_counts('name')
+    domains = domains.reset_index(name='hits')
+    domains['percentage'] = domains['hits'] / len(total_data) * 100
+    domains['percentage'] = domains['percentage'].round(2)
+    domains['percentage'] = domains['percentage'].apply(str) + '%'
+
+    # Process the IPs statistics data using pandas
+    ips = df.value_counts('client_ip')
+    ips = ips.reset_index(name='hits')
+    ips['percentage'] = ips['hits'] / len(total_data) * 100
+    ips['percentage'] = ips['percentage'].round(2)
+    ips['percentage'] = ips['percentage'].apply(str) + '%'
+
+    # Prints statistics showing the information analyzed with pandas
+    print('Total Records: ' + str(len(total_data)))
+    print('')
+    print('Client IPs Rank')
+    print('------------------------------------------------------')
+    print(ips.head(5))
+    print('')
+    print('Host Rank')
+    print('------------------------------------------------------')
+    print(domains.head(5))
+    print('Done')
