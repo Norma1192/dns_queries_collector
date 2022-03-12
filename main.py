@@ -11,11 +11,16 @@ import json
 import datetime
 import pandas as pd
 import argparse
+import logging
 
 # Add a CLI parser for asking the path of the Log File
 parser = argparse.ArgumentParser(description='DNS Queries Collector Script')
 parser.add_argument('--file_path', type=str,
                     help='Please provide the path where you have the BIND server log')
+
+# Add a log file where the module will store the data of status process
+logging.basicConfig(filename='script.log', format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p',
+                    level=logging.INFO)
 
 # REST API Snippet 
 def requestApi (data):
@@ -63,12 +68,18 @@ def dataLineConstructor(line):
 
     if None not in data.values():
         return data
+    else:
+        # Stores an error in the log if any occurs with the data parsed
+        logging.info('Error at line', line)
 
 # Setting the name module to main
 if __name__ == "__main__":
 
     # Reading the parse arguments to catch the path file
     args = parser.parse_args()
+
+    # Indicates when the process start
+    logging.info('Script started')
 
     # Reading BIND Log
     with open(args.file_path, "r") as file:
@@ -101,7 +112,8 @@ if __name__ == "__main__":
                 # Posts the Chunk and stores the request status code
                 information_request = requestApi(chunk_data)
                 if information_request != 200:
-                    print("Bad Request at chunk " + str(num_lines % 500))
+                    # Logs if it occurs a failure with the chunk request
+                    logging.info('Bad Request at chunk ', num_lines % 500, num_lines)
                 # Loads the data chunk in the total data (pandas)
                 total_data += chunk_data
                 # Clean chunk data
@@ -134,4 +146,4 @@ if __name__ == "__main__":
         print('Host Rank')
         print('------------------------------------------------------')
         print(domains.head(5))
-        print('Done')
+        logging.info('Process Finished')
