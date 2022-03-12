@@ -56,3 +56,38 @@ def dataLineConstructor(line):
 
     if None not in data.values():
         return data
+
+# Reading BIND Log
+with open("queries", "r") as file:
+
+    # Stores the information chunk the script will post
+    chunk_data = []
+
+    # I tried to load line per line, but I needed to set a "Limit of lines", and send the final chunk
+    file_loaded = file.readlines()
+
+    # Limit of lines in the file
+    max_lines = len(file_loaded)
+
+    # Stores the number of lines the script has processed
+    num_lines = 0
+
+    for line in file_loaded:
+
+        # Reads the line and parse the data
+        line_data = dataLineConstructor(line)
+        # Loads the data line in the chunk
+        chunk_data.append(line_data)
+        # Counts a line
+        num_lines += 1
+
+        if len(chunk_data) == 500 or num_lines == max_lines:
+            # Posts the Chunk and stores the request status code
+            information_request = requestApi(chunk_data)
+            if information_request != 200:
+                print("Bad Request at chunk " + str(num_lines % 500))
+
+            # Clean chunk data
+            chunk_data = []
+
+        print('Done')
