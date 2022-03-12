@@ -10,6 +10,12 @@ import requests
 import json
 import datetime
 import pandas as pd
+import argparse
+
+# Add a CLI parser for asking the path of the Log File
+parser = argparse.ArgumentParser(description='DNS Queries Collector Script')
+parser.add_argument('--file_path', type=str,
+                    help='Please provide the path where you have the BIND server log')
 
 # REST API Snippet 
 def requestApi (data):
@@ -58,68 +64,74 @@ def dataLineConstructor(line):
     if None not in data.values():
         return data
 
-# Reading BIND Log
-with open("queries", "r") as file:
+# Setting the name module to main
+if __name__ == "__main__":
 
-    # Stores the information chunk the script will post
-    chunk_data = []
+    # Reading the parse arguments to catch the path file
+    args = parser.parse_args()
 
-    # Stores all the data parsed to be analyzed with pandas
-    total_data = []
+    # Reading BIND Log
+    with open(args.file_path, "r") as file:
 
-    # I tried to load line per line, but I needed to set a "Limit of lines", and send the final chunk
-    file_loaded = file.readlines()
+        # Stores the information chunk the script will post
+        chunk_data = []
 
-    # Limit of lines in the file
-    max_lines = len(file_loaded)
+        # Stores all the data parsed to be analyzed with pandas
+        total_data = []
 
-    # Stores the number of lines the script has processed
-    num_lines = 0
+        # I tried to load line per line, but I needed to set a "Limit of lines", and send the final chunk
+        file_loaded = file.readlines()
 
-    for line in file_loaded:
+        # Limit of lines in the file
+        max_lines = len(file_loaded)
 
-        # Reads the line and parse the data
-        line_data = dataLineConstructor(line)
-        # Loads the data line in the chunk
-        chunk_data.append(line_data)
-        # Counts a line
-        num_lines += 1
+        # Stores the number of lines the script has processed
+        num_lines = 0
 
-        if len(chunk_data) == 500 or num_lines == max_lines:
-            # Posts the Chunk and stores the request status code
-            information_request = requestApi(chunk_data)
-            if information_request != 200:
-                print("Bad Request at chunk " + str(num_lines % 500))
-            # Loads the data chunk in the total data (pandas)
-            total_data += chunk_data
-            # Clean chunk data
-            chunk_data = []
+        for line in file_loaded:
 
-    # Crates a DataFrame with the total data Info
-    df = pd.DataFrame(total_data)
+            # Reads the line and parse the data
+            line_data = dataLineConstructor(line)
+            # Loads the data line in the chunk
+            chunk_data.append(line_data)
+            # Counts a line
+            num_lines += 1
 
-    # Process the hosts statistics data using pandas
-    domains = df.value_counts('name')
-    domains = domains.reset_index(name='hits')
-    domains['percentage'] = domains['hits'] / len(total_data) * 100
-    domains['percentage'] = domains['percentage'].round(2)
-    domains['percentage'] = domains['percentage'].apply(str) + '%'
+            if len(chunk_data) == 500 or num_lines == max_lines:
+                # Posts the Chunk and stores the request status code
+                information_request = requestApi(chunk_data)
+                if information_request != 200:
+                    print("Bad Request at chunk " + str(num_lines % 500))
+                # Loads the data chunk in the total data (pandas)
+                total_data += chunk_data
+                # Clean chunk data
+                chunk_data = []
 
-    # Process the IPs statistics data using pandas
-    ips = df.value_counts('client_ip')
-    ips = ips.reset_index(name='hits')
-    ips['percentage'] = ips['hits'] / len(total_data) * 100
-    ips['percentage'] = ips['percentage'].round(2)
-    ips['percentage'] = ips['percentage'].apply(str) + '%'
+        # Crates a DataFrame with the total data Info
+        df = pd.DataFrame(total_data)
 
-    # Prints statistics showing the information analyzed with pandas
-    print('Total Records: ' + str(len(total_data)))
-    print('')
-    print('Client IPs Rank')
-    print('------------------------------------------------------')
-    print(ips.head(5))
-    print('')
-    print('Host Rank')
-    print('------------------------------------------------------')
-    print(domains.head(5))
-    print('Done')
+        # Process the hosts statistics data using pandas
+        domains = df.value_counts('name')
+        domains = domains.reset_index(name='hits')
+        domains['percentage'] = domains['hits'] / len(total_data) * 100
+        domains['percentage'] = domains['percentage'].round(2)
+        domains['percentage'] = domains['percentage'].apply(str) + '%'
+
+        # Process the IPs statistics data using pandas
+        ips = df.value_counts('client_ip')
+        ips = ips.reset_index(name='hits')
+        ips['percentage'] = ips['hits'] / len(total_data) * 100
+        ips['percentage'] = ips['percentage'].round(2)
+        ips['percentage'] = ips['percentage'].apply(str) + '%'
+
+        # Prints statistics showing the information analyzed with pandas
+        print('Total Records: ' + str(len(total_data)))
+        print('')
+        print('Client IPs Rank')
+        print('------------------------------------------------------')
+        print(ips.head(5))
+        print('')
+        print('Host Rank')
+        print('------------------------------------------------------')
+        print(domains.head(5))
+        print('Done')
